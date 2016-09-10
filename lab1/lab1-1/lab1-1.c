@@ -5,6 +5,7 @@
 
 // You can compile like this:
 // gcc lab1-1.c ../common/*.c -lGL -o lab1-1 -I../common
+// gcc lab1-1.c ../common/*.c ../common/Mac/MicroGlut.m -o lab1-1 -framework OpenGL -framework Cocoa -I../common/Mac -I../common
 
 #include <stdio.h>
 #include <math.h>
@@ -65,8 +66,9 @@ Model* squareModel;
 //----------------------Globals-------------------------------------------------
 Point3D cam, point;
 Model *model1;
-FBOstruct *fbo1, *fbo2;
-GLuint phongshader = 0, plaintextureshader = 0;
+FBOstruct *originalFBO, *truncFBO, *bloomFBO, *temp;
+GLuint phongshader = 0, plaintextureshader = 0, lowpshader = 0, truncshader = 0, addshader = 0;
+GLfloat t = 0;
 
 //-------------------------------------------------------------------------------------
 
@@ -84,13 +86,18 @@ void init(void)
 	// Load and compile shaders
 	plaintextureshader = loadShaders("plaintextureshader.vert", "plaintextureshader.frag");  // puts texture on teapot
 	phongshader = loadShaders("phong.vert", "phong.frag");  // renders with light (used for initial renderin of teapot)
+    lowpshader = loadShaders("lowPassShader.vert", "lowPassShader.frag"); // shader for the low pass filter
+    truncshader = loadShaders("blooming.vert", "blooming.frag"); // truncate to get values over 1
+    addshader = loadShaders("addshader.vert", "addshader.frag"); // shader to add different textures
 
 	printError("init shader");
 
-	fbo1 = initFBO(W, H, 0);
-	fbo2 = initFBO(W, H, 0);
-
-	// load the model
+	originalFBO = initFBO(W, H, 0);
+	truncFBO = initFBO(W, H, 0);
+    bloomFBO = initFBO(W, H, 0);
+    temp = initFBO(W, H, 0);
+	
+    // load the model
 //	model1 = LoadModelPlus("teapot.obj");
 	model1 = LoadModelPlus("stanford-bunny.obj");
 
@@ -112,6 +119,15 @@ void OnTimer(int value)
 	glutTimerFunc(5, &OnTimer, value);
 }
 
+void downSampleWithPingPong(int n, FBOstruct* fbo1, FBOstruct* fbo2){
+    for(int i = 0; i < n; i++){
+        useFBO(fbo2, fbo1, 0L);
+        DrawModel(squareModel, lowpshader, "in_Position", NULL, "in_TexCoord");
+        useFBO(fbo1, fbo2, 0L);
+        DrawModel(squareModel, lowpshader, "in_Position", NULL, "in_TexCoord");
+    }
+}
+
 //-------------------------------callback functions------------------------------------------
 void display(void)
 {
@@ -122,7 +138,7 @@ void display(void)
 	//  function will get called several times per second
 
 	// render to fbo1!
-	useFBO(fbo1, 0L, 0L);
+	useFBO(originalFBO, 0L, 0L);
 
 	// Clear framebuffer & zbuffer
 	glClearColor(0.1, 0.1, 0.3, 0);
@@ -138,8 +154,8 @@ void display(void)
 
 	glUniformMatrix4fv(glGetUniformLocation(phongshader, "projectionMatrix"), 1, GL_TRUE, projectionMatrix.m);
 	glUniformMatrix4fv(glGetUniformLocation(phongshader, "modelviewMatrix"), 1, GL_TRUE, vm2.m);
-	glUniform3fv(glGetUniformLocation(phongshader, "camPos"), 1, &cam.x);
-	glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
+	//glUniform3fv(glGetUniformLocation(phongshader, "camPos"), 1, &cam.x);
+	//glUniform1i(glGetUniformLocation(phongshader, "texUnit"), 0);
 
 	// Enable Z-buffering
 	glEnable(GL_DEPTH_TEST);
@@ -151,17 +167,37 @@ void display(void)
 
 	// Done rendering the FBO! Set up for rendering on screen, using the result as texture!
 
-//	glFlush(); // Can cause flickering on some systems. Can also be necessary to make drawing complete.
-	useFBO(0L, fbo1, 0L);
-	glClearColor(0.0, 0.0, 0.0, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+    
+    glUseProgram(truncshader);
+    glUniform1f(glGetUniformLocation(truncshader, "texUnit"), 0);
+    
+    useFBO(truncFBO, originalFBO, 0L);
+    DrawModel(squareModel, truncshader, "in_Position", NULL, "in_TexCoord");
 
-	// Activate second shader program
-	glUseProgram(plaintextureshader);
+    // low pass filtering upg. 1b
+    
+    glUseProgram(lowpshader);
+    
+    glUniform1f(glGetUniformLocation(lowpshader, "texUnit"), 0);
 
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	DrawModel(squareModel, plaintextureshader, "in_Position", NULL, "in_TexCoord");
+    downSampleWithPingPong(8, truncFBO, temp);
+    /*
+    for (int i = 0; i < 10; i++) {
+        useFBO(temp, truncFBO, 0L);
+        DrawModel(squareModel, lowpshader, "in_Position", NULL, "in_TexCoord");
+        useFBO(truncFBO, temp, 0L);
+        DrawModel(squareModel, lowpshader, "in_Position", NULL, "in_TexCoord");
+    }
+    */
+    // use shader to add together textures
+    glUseProgram(addshader);
+    glUniform1f(glGetUniformLocation(addshader, "texUnit"), 0);
+    glUniform1f(glGetUniformLocation(addshader, "texUnit2"), 1);
+    
+    useFBO(0L, truncFBO, originalFBO);
+    DrawModel(squareModel, addshader, "in_Position", NULL, "in_TexCoord");
 
 	glutSwapBuffers();
 }
