@@ -77,6 +77,10 @@ Model *cylinderModel; // Collects all the above for drawing with glDrawElements
 
 mat4 modelViewMatrix, projectionMatrix;
 
+mat4 modelToBone[2];
+mat4 boneToModel[2];
+mat4 boneTransforms[2];
+
 ///////////////////////////////////////////////////
 //		B U I L D	C Y L I N D E R
 // Desc:	bygger upp cylindern 
@@ -184,8 +188,33 @@ void setupBones(void)
 	g_bones[1].pos = SetVector(4.5f, 0.0f, 0.0f);
 	g_bones[0].rot = IdentityMatrix();
 	g_bones[1].rot = IdentityMatrix();
+    
+    for(int i = 0; i < 2; i++) {
+        modelToBone[i] = InvertMat4(
+                                    Mult(
+                                         T(g_bones[i].pos.x, g_bones[i].pos.y, g_bones[i].pos.z),
+                                         g_bones[i].rot
+                                         )
+                                    );
+    }
 }
 
+void CalculateTransforms()
+{
+    mat4 previousTransform = IdentityMatrix();
+    for(int i = 0; i < 2; i++) {
+        boneToModel[i] = Mult(
+                              T(g_bones[i].pos.x, g_bones[i].pos.y, g_bones[i].pos.z),
+                                g_bones[i].rot
+                                );
+        boneTransforms[i] = Mult(
+                                Mult(boneToModel[i], previousTransform),
+                                modelToBone[i]
+                                );
+        previousTransform = boneTransforms[i];
+    }
+}
+    
 
 ///////////////////////////////////////////////////////
 //		D E F O R M	C Y L I N D E R 
@@ -240,16 +269,7 @@ void DeformCylinder()
 			// g_boneWeights innehåller blendvikter för benen.
 			// g_vertsOrg innehåller ursprunglig vertexdata.
 			// g_vertsRes innehåller den vertexdata som skickas till OpenGL.
-               
-            /*
-            g_vertsRes[row][corner] = MultVec3(Mult(T(g_bones[0].pos.x, g_bones[0].pos.y, g_bones[0].pos.z),
-                                               Mult(g_bones[0].rot,T(-g_bones[0].pos.x, -g_bones[0].pos.y, -g_bones[0].pos.z))),
-                                               g_vertsOrg[row][corner]);
-                                               
-            */
             
-           // g_vertsRes[row][corner] = VectorAdd(ScalarMult(vertsTemp1[row][corner], weight[row]),
-           //                                       ScalarMult(vertsTemp2[row][corner],(1-weight[row])));
 			
 		}
 	}
@@ -268,7 +288,7 @@ void animateBones(void)
 	float angle = sin(time * 5.f) / 2.0f * 3.0f;
 
 	// rotera på ben 1
-	//g_bones[0].rot = Rx(angle);
+	g_bones[0].rot = Rx(angle);
     g_bones[1].rot = Rz(angle);
 //	printf("%f %f\n", angle, time);
 }
@@ -281,6 +301,7 @@ void setBoneRotation(void)
 {
 	// Uppgift 3 TODO: Här behöver du skicka över benens rotation
 	// till vertexshadern
+    glUniformMatrix4fv(glGetUniformLocation(g_shader, "boneRot"), 1, GL_TRUE, g_bones[1].rot.m);
 }
 
 
@@ -291,6 +312,7 @@ void setBoneLocation(void)
 {
 	// Uppgift 3 TODO: Här behöver du skicka över benens position
 	// till vertexshadern
+    glUniform3f(glGetUniformLocation(g_shader, "bonePos"), g_bones[1].pos.x, g_bones[1].pos.y, g_bones[1].pos.z);
 }
 
 
@@ -305,7 +327,7 @@ void DrawCylinder()
 	// Ersätt DeformCylinder med en vertex shader som gör vad DeformCylinder gör.
 	// Begynnelsen till shaderkoden ligger i filen "shader.vert" ...
 	
-	DeformCylinder();
+	//DeformCylinder();
 	
 	setBoneLocation();
 	setBoneRotation();
