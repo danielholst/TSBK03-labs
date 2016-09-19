@@ -103,7 +103,7 @@ Material ballMt = { { 1.0, 1.0, 1.0, 1.0 }, { 1.0, 1.0, 1.0, 0.0 },
                 };
 
 
-enum {kNumBalls = 16}; // Change as desired, max 16
+enum {kNumBalls = 4}; // Change as desired, max 16
 
 //------------------------------Globals---------------------------------
 ModelTexturePair tableAndLegs, tableSurf;
@@ -189,10 +189,25 @@ void updateWorld()
 	}
 
 	// Detect collisions, calculate speed differences, apply forces
+    
+    vec3 impactSpeed1, impactSpeed2, relSpeed;
+    
 	for (i = 0; i < kNumBalls; i++)
         for (j = i+1; j < kNumBalls; j++)
         {
-            // YOUR CODE HERE
+            if ( vec3Length( VectorSub(ball[i].X, ball[j].X) ) < kBallSize ) {
+                
+                impactSpeed1 = ball[i].P;
+                impactSpeed2 = ball[j].P;
+                
+                ball[i].P = impactSpeed2;
+                ball[j].P = impactSpeed1;
+                
+                //relSpeed = impactSpeed1 - impactSpeed2;
+                
+                //fprintf(stderr, "hit");
+            }
+            
         }
 
 	// Control rotation here to reflect
