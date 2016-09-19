@@ -3,7 +3,7 @@
 // 2012: Ported to OpenGL 3.2 by Justina Mickonyt‘ and Ingemar R.
 // 2013: Adapted to VectorUtils3 and MicroGlut.
 
-// gcc lab3.c ../common/*.c -lGL -o lab3 -I../common 
+// gcc lab3.c ../common/*.c ../common/Mac/MicroGlut.m -o lab3 -framework OpenGL -framework Cocoa -I../common/Mac -I../common
 
 // Includes vary a bit with platforms.
 // MS Windows needs GLEW or glee.
@@ -158,6 +158,12 @@ void loadMaterial(Material mt)
     glUniform1fv(glGetUniformLocation(shader, "shininess"), 1, &mt.shininess);
 }
 
+// returns length of a vec3 ( abs(vec) )
+float vec3Length(vec3 v)
+{
+    return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);;
+}
+
 //---------------------------------- physics update and billiard table rendering ----------------------------------
 void updateWorld()
 {
@@ -193,7 +199,8 @@ void updateWorld()
 	// friction against floor, simplified as well as more correct
 	for (i = 0; i < kNumBalls; i++)
 	{
-		// YOUR CODE HERE
+        ball[i].R = ArbRotate(CrossProduct(ball[i].v, SetVector(0, -1, 0)),
+                              6 * currentTime * vec3Length(ball[i].v));
 	}
 
 // Update state, follows the book closely
