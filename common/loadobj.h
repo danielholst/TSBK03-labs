@@ -14,6 +14,9 @@ extern "C" {
 	#include <GL/gl.h>
 #endif
 
+// How many error messages do you want before it stops?
+#define NUM_DRAWMODEL_ERROR 8
+
 typedef struct
 {
   GLfloat* vertexArray;
@@ -29,14 +32,22 @@ typedef struct
   GLuint vb, ib, nb, tb; // VBOs
 } Model;
 
-Model* LoadModel(char* name);
+// Basic model loading
 
-// NEW:
+Model* LoadModel(char* name); // Old version, single part OBJ only!
+Model** LoadModel2(char* name); // Multi-part OBJ!
+
+// Extended, load model and upload to arrays!
+// DrawModel is for drawing such preloaded models.
 
 void DrawModel(Model *m, GLuint program, char* vertexVariableName, char* normalVariableName, char* texCoordVariableName);
 void DrawWireframeModel(Model *m, GLuint program, char* vertexVariableName, char* normalVariableName, char* texCoordVariableName);
 
 Model* LoadModelPlus(char* name);
+Model** LoadModel2Plus(char* name);
+
+// Utility functions that you may need if you want to modify the model.
+
 void EnableModelForShader(Model *m, GLuint program, // NOT TESTED
 			char* vertexVariableName,
 			char* normalVariableName,
@@ -53,6 +64,7 @@ void ReloadModelData(Model *m);
 
 void CenterModel(Model *m);
 void ScaleModel(Model *m, float sx, float sy, float sz);
+void DisposeModel(Model *m);
 
 #ifdef __cplusplus
 }

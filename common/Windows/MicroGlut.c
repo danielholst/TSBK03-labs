@@ -15,12 +15,19 @@
 // 150817: Timers and rescaling runs fine!
 // Menus and warp pointer are missing, but this looks good enough for "first beta version"!
 // Tested mainly with the Psychedelic Teapot example.
-
+// 150919 Added the very useful glutKeyIsDown plus support for key up events.
+// 150920: glutInitWindowPosition and glutInitWindowSize are now working
+// 150923: Keyboard events now report ASCII values instead of virtual codes. Also, various special keys like arrow keys should work.
+// Finally, I have taken some steps to make special key callbacks obsolete by smarter mapping of special keys.
+// 151203: Added a stdio window.
 
 #include <windows.h>
 #include "glew.h"
 #include <gl/gl.h>
 #include "MicroGlut.h"
+#include <stdio.h>
+#include <io.h>
+#include <fcntl.h>
 
 #ifndef _WIN32
 	This line causes an error if you are not using Windows. It means that you are accidentally compiling the Windows version.
@@ -33,6 +40,8 @@ void (*gDisplay)(void);
 void (*gReshape)(int width, int height);
 void (*gKey)(unsigned char key, int x, int y);
 void (*gKeyUp)(unsigned char key, int x, int y);
+void (*gSpecialKey)(unsigned char key, int x, int y); // I consider this obsolete!
+void (*gSpecialKeyUp)(unsigned char key, int x, int y); // I consider this obsolete!
 void (*gMouseMoved)(int x, int y);
 void (*gMouseDragged)(int x, int y);
 void (*gMouseFunc)(int button, int state, int x, int y);
@@ -42,6 +51,7 @@ char updatePending = 1;
 char gRunning = 1;
 int gContextVersionMajor = 0;
 int gContextVersionMinor = 0;
+char gKeymap[256];
 
 // Prototype
 static void checktimers();
@@ -147,6 +157,21 @@ static struct timeval timeStart;
 
 void glutInit(int *argcp, char **argv)
 {
+	int i;
+	int hCrt;
+	FILE *hf;
+
+	for (i = 0; i < 256; i++) gKeymap[i] = 0;
+
+	// Make printf work!
+	AllocConsole();
+	hCrt = _open_osfhandle(
+		(long) GetStdHandle(STD_OUTPUT_HANDLE),
+		_O_TEXT
+		);
+	hf = _fdopen( hCrt, "w" );
+	*stdout = *hf;
+	i = setvbuf( stdout, NULL, _IONBF, 0 );
 }
 
 int gWindowPosX = 10;
@@ -183,8 +208,13 @@ void glutCreateWindow(char *title)
 	hWnd = CreateWindow( 
 		"GLSample" /*This is really wrong, should be 16-bit text like the title!*/, szTitle, 
 		WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_OVERLAPPEDWINDOW, // WS_OVERLAPPEDWINDOW gives rescalable window
-		0, 0, 256, 256,
+		gWindowPosX, gWindowPosY, gWindowWidth, gWindowHeight,
 		NULL, NULL, hInstance, NULL );
+//	hWnd = CreateWindow( 
+//		"GLSample" /*This is really wrong, should be 16-bit text like the title!*/, szTitle, 
+//		WS_CAPTION | WS_POPUPWINDOW | WS_VISIBLE | WS_OVERLAPPEDWINDOW, // WS_OVERLAPPEDWINDOW gives rescalable window
+//		0, 0, 256, 256,
+//		NULL, NULL, hInstance, NULL );
 	
 	// enable OpenGL for the window
 	EnableOpenGL( hWnd, &hDC, &hRC );
@@ -263,6 +293,18 @@ void glutKeyboardUpFunc(void (*func)(unsigned char key, int x, int y))
 	gKeyUp = func;
 }
 
+// I consider this obsolete!
+void glutSpecialFunc(void (*func)(unsigned char key, int x, int y))
+{
+	gSpecialKey = func;
+}
+
+// I consider this obsolete!
+void glutSpecialUpFunc(void (*func)(unsigned char key, int x, int y))
+{
+	gSpecialKeyUp = func;
+}
+
 void glutPassiveMotionFunc(void (*func)(int x, int y))
 {
 	gMouseMoved = func;
@@ -306,6 +348,84 @@ void glutIdleFunc(void (*func)(void))
 	glutRepeatingTimer(10);
 }
 
+char glutKeyIsDown(unsigned char c)
+{
+	return gKeymap[c];
+}
+
+static unsigned char scan2ascii(WPARAM vk, LPARAM scancode)
+{
+   static HKL layout;
+   static unsigned char State[256];
+   static unsigned char chars[2];
+   int count;
+
+   layout = GetKeyboardLayout(0);
+   if (GetKeyboardState(State)==FALSE)
+      return 0;
+   count = ToAsciiEx(vk,scancode,State,&chars,0,layout);
+   if (count > 0) return chars[0];
+   else return 0;
+}
+
+static void doKeyboardEvent(WPARAM wParam, LPARAM lParam, void (*keyFunc)(unsigned char key, int x, int y), void (specialKeyFunc)(unsigned char key, int x, int y), char keyMapValue)
+{
+	unsigned char c;
+
+		switch(wParam)
+		{
+			case VK_F1:
+				c = GLUT_KEY_F1; break;
+			case VK_F2:
+				c = GLUT_KEY_F2; break;
+			case VK_F3:
+				c = GLUT_KEY_F3; break;
+			case VK_F4:
+				c = GLUT_KEY_F4; break;
+			case VK_F5:
+				c = GLUT_KEY_F5; break;
+			case VK_F6:
+				c = GLUT_KEY_F6; break;
+			case VK_F7:
+				c = GLUT_KEY_F7; break;
+// F8 and up ignored since they are not possible on some keyboards - like mine
+
+			case VK_LEFT:
+				c = GLUT_KEY_LEFT; break;
+			case VK_UP:
+				c = GLUT_KEY_UP; break;
+			case VK_RIGHT:
+				c = GLUT_KEY_RIGHT; break;
+			case VK_DOWN:
+				c = GLUT_KEY_DOWN; break;
+
+			case VK_ESCAPE:
+				c = GLUT_KEY_ESC; break;
+			case VK_PRIOR:
+				c = GLUT_KEY_PAGE_UP; break;
+			case VK_NEXT:
+				c = GLUT_KEY_PAGE_DOWN; break;
+			case VK_HOME:
+				c = GLUT_KEY_HOME; break;
+			case VK_END:
+				c = GLUT_KEY_END; break;
+			case VK_INSERT:
+				c = GLUT_KEY_INSERT; break;
+			default:
+				c = scan2ascii(wParam,lParam);
+				if (c == 0) return 0;
+		}
+		if (keyFunc != NULL)
+		{
+			keyFunc(c, 0, 0); // TO DO: x and y
+		}
+		else
+		if (specialKeyFunc != NULL && c < 32)
+		{
+			specialKeyFunc(c, 0, 0); // TO DO: x and y
+		}
+		gKeymap[c] = keyMapValue;
+}
 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -351,20 +471,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return 0;
 		
 	case WM_KEYDOWN:
-		if (wParam == VK_ESCAPE)
-		{
-			PostQuitMessage(0);
-			return 0;
-		}
-		else
-		if (gKey != NULL)
-		{
-			gKey(wParam, 0, 0); // TO DO: x and y
-		}
+		doKeyboardEvent(wParam, lParam, gKey, gSpecialKey, 0);
 		return 0;
-
 	case WM_KEYUP:
-		break;
+		doKeyboardEvent(wParam, lParam, gKeyUp, gSpecialKeyUp, 0);
+		return 0;
 	
 	case WM_SIZE:
 		if (gReshape != NULL)

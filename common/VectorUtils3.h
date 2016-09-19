@@ -33,12 +33,12 @@
 	{
 		GLfloat x, y, z;
 		#ifdef __cplusplus
+            vec3() {}
 			vec3(GLfloat x2, GLfloat y2, GLfloat z2) : x(x2), y(y2), z(z2) {}
 
 //			vec3(vec4 v) : x(v.x), y(v.y), z(v.z) {}
 		#endif
-	}
-	vec3, *vec3Ptr;
+	} vec3, *vec3Ptr;
 	
 	// vec4 is not as useful. Can be a color with alpha, or a quaternion, but IMHO you
 	// rarely need homogenous coordinate vectors on the CPU.
@@ -46,12 +46,13 @@
 	{
 		GLfloat x, y, z, w; // w or h
 		#ifdef __cplusplus
+            vec4() {}
 			vec4(GLfloat x2, GLfloat y2, GLfloat z2, GLfloat w2) : x(x2), y(y2), z(z2), w(w2) {}
 			
 			vec4(vec3 v) : x(v.x), y(v.y), z(v.z), w(1) {}
 		#endif
-	}
-	vec4, *vec4Ptr;
+	} vec4, *vec4Ptr;
+	
 	typedef struct mat4
 	{
 		GLfloat m[16];
@@ -133,6 +134,11 @@ extern "C" {
 	mat4 mat3tomat4(mat3 m);
 	vec3 vec4tovec3(vec4 v);
 	vec4 vec3tovec4(vec3 v);
+
+// Convenient printing calls
+	void printMat4(mat4 m);
+	void printVec3(vec3 in);
+
 #ifdef __cplusplus
 }
 #endif

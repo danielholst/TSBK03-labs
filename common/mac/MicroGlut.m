@@ -48,6 +48,11 @@
 // 150820: Minor bug fix in glutReshapeWindow.
 // 150827: Hacked around the needlessly deprecated convertBaseToScreen. Also skipped
 // CGSetLocalEventsSuppressionInterval which MIGHT not be needed...
+// 150918: More keys map properly to the GLUT constants, like GLUT_KEY_ESC.
+// Rewrote glutCheckLoop, now it seems to work fine. Tested with the "triangle" demo that lacks main loop.
+// Added GLUT_QUIT_FLAG for glutGet.
+// 150919: Added GLUT_MOUSE_POSITION_X and GLUT_MOUSE_POSITION_Y to glutGet.
+// 150923: Changed the keyboard special key constants to avoid all usable ASCII codes. This makes the "special key" calls unnecessary and keyboard handling simpler. We can stop using "special key" callbacks alltogether.
 
 // Incompatibility in mouse coordinates; global or local?
 // Should be local! (I think they are now!)
@@ -62,7 +67,7 @@
 
 #include "MicroGlut.h"
 
-// If this is not compiled on the Mac, tell me!
+// If this is compiled on something else than a Mac, tell me!
 #ifndef __APPLE__
 	ERROR! This (MicroGlut.m) is the Mac version of MicroGlut which will not work on other platforms!
 #endif
@@ -164,6 +169,10 @@ void MakeContext(NSView *view)
 	
 	m_context = [[NSOpenGLContext alloc] initWithFormat: fmt shareContext: nil];
 	[fmt release];
+//	[m_context makeCurrentContext];
+
+
+//	[m_context setView: theView];
 	[m_context makeCurrentContext];
 }
 
@@ -278,11 +287,12 @@ static void doKeyboardEvent(NSEvent *theEvent, void (*func)(unsigned char key, i
 	char *chars;
 	
 	chars = (char *)[[theEvent characters] cStringUsingEncoding: NSMacOSRomanStringEncoding];
-	
+	NSPoint mouseDownPos = [theEvent locationInWindow];
+
 	if (chars != NULL)
 	{
 		if (func != NULL) // Change 120913
-			func(chars[0], 0, 0); // TO DO: x and y
+			func(chars[0], mouseDownPos.x, mouseDownPos.y); // TO DO: x and y
 		
 		gKeymap[(unsigned int)chars[0]] = keyMapValue;
 	}
@@ -291,6 +301,22 @@ static void doKeyboardEvent(NSEvent *theEvent, void (*func)(unsigned char key, i
 		char code;
 		switch( [theEvent keyCode] )
 		{
+			case 0x35: code = GLUT_KEY_ESC; break;
+			case 0x30: code = GLUT_KEY_TAB; break;
+			case 0x24: code = GLUT_KEY_RETURN; break;
+			case 0x31: code = GLUT_KEY_SPACE; break;
+			case 0x29: code = GLUT_KEY_SEMICOLON; break;
+			case 0x2B: code = GLUT_KEY_COMMA; break;
+			case 0x2F: code = GLUT_KEY_DECIMAL; break;
+			case 0x32: code = GLUT_KEY_GRAVE; break;
+			case 0x27: code = GLUT_KEY_QUOTE; break;
+			case 0x21: code = GLUT_KEY_LBRACKET; break;
+			case 0x1E: code = GLUT_KEY_RBRACKET; break;
+			case 0x2A: code = GLUT_KEY_BACKSLASH; break;
+			case 0x2C: code = GLUT_KEY_SLASH; break;
+			case 0x18:
+			case 0x51: code = GLUT_KEY_EQUAL; break;
+
 			case 126: code = GLUT_KEY_UP; break;
 			case 125: code = GLUT_KEY_DOWN; break;
 			case 124: code = GLUT_KEY_RIGHT; break;
@@ -310,7 +336,11 @@ static void doKeyboardEvent(NSEvent *theEvent, void (*func)(unsigned char key, i
 			default: code = [theEvent keyCode];
 		}
 		if (specialfunc != NULL) // Change 130114
-			specialfunc(code, 0, 0); // TO DO: x and y
+			specialfunc(code, mouseDownPos.x, mouseDownPos.y); // TO DO: x and y
+		else // If no special, send to normal (future preferred way)
+		if (func != NULL) // Change 150114
+			func(code, mouseDownPos.x, mouseDownPos.y); // TO DO: x and y
+// NOTE: This was a bug until I modified the special key constants! We can now check gKeymap with normal ASCII and special codes with the same table!
 		gKeymap[code] = keyMapValue;
 	}
 }
@@ -334,18 +364,21 @@ static void doKeyboardEvent(NSEvent *theEvent, void (*func)(unsigned char key, i
 
 #define Pi 3.1415
 
+// Mouse position is saved so it can be retrieved at any time with glutGet
+NSPoint gMousePosition;
+
 @implementation GlutView
 
 -(void) mouseMoved:(NSEvent *)theEvent
 {
-	NSPoint p;
+//	NSPoint p;
 	[m_context makeCurrentContext];
 	
+	gMousePosition = [theEvent locationInWindow];
+	gMousePosition = [self convertPoint: gMousePosition fromView: nil];
 	if (gMouseMoved != nil)
 	{
-		p = [theEvent locationInWindow];
-		p = [self convertPoint: p fromView: nil];
-		gMouseMoved(p.x, p.y);
+		gMouseMoved(gMousePosition.x, gMousePosition.y);
 	}
 }
 
@@ -391,9 +424,9 @@ char gLeftIsRight = 0;
 	{
 		// Convert location in window to location in view
 		p = [theEvent locationInWindow];
-	printf("mouseDown before convertPoint %f %f \n", p.x, p.y);
+//	printf("mouseDown before convertPoint %f %f \n", p.x, p.y);
 		p = [self convertPoint: p fromView: nil];
-	printf("mouseDown %f %f \n", p.x, p.y);
+//	printf("mouseDown %f %f \n", p.x, p.y);
 		
 		if ([NSEvent modifierFlags] & NSControlKeyMask)
 		{
@@ -562,7 +595,7 @@ char gLeftIsRight = 0;
 		gDisplay();
 	
 	[m_context flushBuffer];
-	[NSOpenGLContext clearCurrentContext];
+//	[NSOpenGLContext clearCurrentContext];
 }
 
 -(void)windowWillClose:(NSNotification *)note
@@ -654,7 +687,7 @@ void home()
 	CFRelease(resourcesURL);
 
 	chdir(path);
-	printf("Current Path: %s\n", path);
+//	printf("Current Path: %s\n", path);
 }
 
 // ------------------ Main program ---------------------
@@ -670,7 +703,7 @@ void home()
 }
 @end
 
-MGApplication *myApp;
+NSApplication *myApp;
 NSView *view;
 NSAutoreleasePool *pool;
 NSWindow *window;
@@ -784,10 +817,14 @@ int glutCreateWindow (char *windowTitle)
 	[window setDelegate: (GlutView*)view];
 	[window makeKeyAndOrderFront: nil];
 	[window makeFirstResponder: view]; // Added 130214
+	[window setContentView: view];
 	return 0; // Fake placeholder
 }
 
-void glutMainLoop()
+
+// MAIN LOOP
+
+void oglutMainLoop()
 {
 	[window setContentView: view];
 
@@ -826,20 +863,83 @@ void glutMainLoop()
 	}
 }
 
-// This won't work yet
-/*
-void glutCheckLoop()
+char inMainLoop = 0;
+char finished = 0;
+
+void internalCheckLoop()
 {
-	[myApp runOnce];
+	NSEvent *event;
 	
+//	[myApp runOnce]; // ???
+	
+	pool = [NSAutoreleasePool new];
+	
+	if (updatePending || gIdle != NULL || !inMainLoop) // If it is, then the setNeedsDisplay below has been called and we will get an update event - but must not block!
+	// (If there was an update coming I think it should not block, but at least this works.)
+		event = [myApp nextEventMatchingMask: NSAnyEventMask
+						untilDate: [NSDate dateWithTimeIntervalSinceNow: 0.0]
+						inMode: NSDefaultRunLoopMode
+						dequeue: true
+						];
+	else
+		event = [myApp nextEventMatchingMask: NSAnyEventMask
+						untilDate: [NSDate distantFuture]
+						inMode: NSDefaultRunLoopMode
+						dequeue: true
+						];
+	
+	[myApp sendEvent: event];
+	[myApp updateWindows];
+
 	if (gIdle != NULL)
 		if (!updatePending)
 			gIdle();
 	
+	// Did not help?
+	if (updatePending)
+		[theView setNeedsDisplay: YES];
 	[pool release];
-	pool = [NSAutoreleasePool new];
 }
-*/
+
+void glutCheckLoop()
+{
+	inMainLoop = 0;
+	
+//	if (!inMainLoop) [window setContentView: view]; // Why isn't this a job for window creation???
+	if (!finished)
+	{
+		[myApp finishLaunching];
+		finished = 1;
+	}
+
+//	[NSOpenGLContext clearCurrentContext];
+//	[m_context makeCurrentContext];
+//	[m_context setView: theView];
+	[m_context flushBuffer];
+
+	internalCheckLoop();
+
+	[m_context setView: theView];
+//	[m_context makeCurrentContext];
+}
+
+void glutMainLoop()
+{
+	inMainLoop = 1;
+
+//	[window setContentView: view];
+	[myApp finishLaunching];
+	finished = 1;
+
+	while (gRunning)
+	{
+		internalCheckLoop();
+	}
+	inMainLoop = 0;
+}
+
+// END OF MAIN LOOP
+
 
 void glutTimerFunc(int millis, void (*func)(int arg), int arg)
 {
@@ -920,6 +1020,7 @@ void glutMouseFunc(void (*func)(int button, int state, int x, int y))
 // You can safely skip this
 void glutSwapBuffers()
 {
+//	[m_context flushBuffer];
 	glFlush();
 }
 
@@ -929,6 +1030,9 @@ int glutGet(int type)
 	
 	switch (type)
 	{
+	case GLUT_QUIT_FLAG:
+		return !gRunning;
+		break;
 	case GLUT_WINDOW_WIDTH:
 		return lastWidth;
 		break;
@@ -938,6 +1042,12 @@ int glutGet(int type)
 	case GLUT_ELAPSED_TIME:
 		gettimeofday(&tv, NULL);
 		return (tv.tv_usec - timeStart.tv_usec) / 1000 + (tv.tv_sec - timeStart.tv_sec)*1000;
+		break;
+	case GLUT_MOUSE_POSITION_X:
+		return gMousePosition.x;
+		break;
+	case GLUT_MOUSE_POSITION_Y:
+		return gMousePosition.y;
 		break;
 	}
 	return 0;

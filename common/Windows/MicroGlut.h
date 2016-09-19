@@ -15,6 +15,8 @@ void glutReshapeFunc(void (*func)(int width, int height));
 void glutDisplayFunc(void (*func)(void));
 void glutKeyboardFunc(void (*func)(unsigned char key, int x, int y));
 void glutKeyboardUpFunc(void (*func)(unsigned char key, int x, int y));
+void glutSpecialFunc(void (*func)(unsigned char key, int x, int y));
+void glutSpecialUpFunc(void (*func)(unsigned char key, int x, int y));
 
 void glutMouseFunc(void (*func)(int button, int state, int x, int y));
 void glutPassiveMotionFunc(void (*func)(int x, int y));
@@ -30,6 +32,7 @@ int glutGet(int type);
 
 void glutInitDisplayMode(unsigned int mode);
 void glutIdleFunc(void (*func)(void));
+char glutKeyIsDown(unsigned char c);
 
 // Standard GLUT timer
 void glutTimerFunc(int millis, void (*func)(int arg), int arg);
@@ -57,6 +60,33 @@ void glutInitContextVersion(int major, int minor);
 #define GLUT_SINGLE			0
 #define GLUT_DOUBLE			2
 #define GLUT_DEPTH			16
+
+
+
+// Special keys.
+#define GLUT_KEY_F1			1
+#define GLUT_KEY_F2			2
+#define GLUT_KEY_F3			3
+#define GLUT_KEY_F4			4
+#define GLUT_KEY_F5			5
+#define GLUT_KEY_F6			6
+#define GLUT_KEY_F7			7
+// F8 and up ignored since they are not possible on some keyboards - like mine
+#define GLUT_KEY_LEFT			28
+#define GLUT_KEY_UP				29
+#define GLUT_KEY_RIGHT			30
+#define GLUT_KEY_DOWN			31
+#define GLUT_KEY_PAGE_UP		22
+#define GLUT_KEY_PAGE_DOWN		23
+#define GLUT_KEY_HOME			24
+#define GLUT_KEY_END			25
+#define GLUT_KEY_INSERT			26
+
+#define GLUT_KEY_ESC			27
+#define GLUT_KEY_TAB			9
+#define GLUT_KEY_RETURN			13
+#define GLUT_KEY_SPACE			' '
+
 
 
 #ifdef __cplusplus

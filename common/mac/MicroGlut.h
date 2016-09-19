@@ -35,9 +35,13 @@ int glutCreateWindow (char *windowTitle);
 
 void glutSwapBuffers();
 
+// glutGet constants
 #define GLUT_ELAPSED_TIME		(700)
 #define GLUT_WINDOW_WIDTH		102
 #define GLUT_WINDOW_HEIGHT		103
+#define GLUT_QUIT_FLAG			801
+#define GLUT_MOUSE_POSITION_X	802
+#define GLUT_MOUSE_POSITION_Y	803
 // This looks less than perfect...
 #define GLUT_SCREEN_WIDTH GLUT_WINDOW_WIDTH
 #define GLUT_SCREEN_HEIGHT GLUT_WINDOW_HEIGHT
@@ -91,18 +95,45 @@ void glutInitContextVersion(int major, int minor);
 #define GLUT_KEY_F6			6
 #define GLUT_KEY_F7			7
 // F8 and up ignored since they are not possible on some keyboards - like mine
-#define GLUT_KEY_LEFT			100
-#define GLUT_KEY_UP			101
-#define GLUT_KEY_RIGHT			102
-#define GLUT_KEY_DOWN			103
-#define GLUT_KEY_PAGE_UP		104
-#define GLUT_KEY_PAGE_DOWN		105
-#define GLUT_KEY_HOME			106
-#define GLUT_KEY_END			107
-#define GLUT_KEY_INSERT			108
+//#define GLUT_KEY_LEFT			100
+//#define GLUT_KEY_UP				101
+//#define GLUT_KEY_RIGHT			102
+//#define GLUT_KEY_DOWN			103
+//#define GLUT_KEY_PAGE_UP		104
+//#define GLUT_KEY_PAGE_DOWN		105
+//#define GLUT_KEY_HOME			106
+//#define GLUT_KEY_END			107
+//#define GLUT_KEY_INSERT			108
+// Re-mapped 2015-09-23: Make EVERYTHING "ordinary", no need for "special!"
+// I know that these codes mean something else, but none of them mean any keys!
+#define GLUT_KEY_LEFT			28
+#define GLUT_KEY_UP				29
+#define GLUT_KEY_RIGHT			30
+#define GLUT_KEY_DOWN			31
+#define GLUT_KEY_PAGE_UP		22
+#define GLUT_KEY_PAGE_DOWN		23
+#define GLUT_KEY_HOME			24
+#define GLUT_KEY_END			25
+#define GLUT_KEY_INSERT			26
 // Visibility
 #define GLUT_NOT_VISIBLE		0
 #define GLUT_VISIBLE			1
+
+// These feel less important to me
+#define GLUT_KEY_ESC			 27
+#define GLUT_KEY_TAB			  9
+#define GLUT_KEY_RETURN			 13
+#define GLUT_KEY_SPACE			' ' 
+#define GLUT_KEY_SEMICOLON		';'
+#define GLUT_KEY_COMMA			','
+#define GLUT_KEY_DECIMAL		'.'
+#define GLUT_KEY_GRAVE			'`'
+#define GLUT_KEY_QUOTE			'\''
+#define GLUT_KEY_LBRACKET		'['
+#define GLUT_KEY_RBRACKET		']'
+#define GLUT_KEY_BACKSLASH		'\\'
+#define GLUT_KEY_SLASH			'/'
+#define GLUT_KEY_EQUAL			'='
 
 
 // Menu support
@@ -133,7 +164,7 @@ void glutToggleFullScreen();
 
 void glutExit();
 
-// Placeholders
+// Placeholders, we only support one window, unlike FreeGlut.
 void glutSetWindow(int win);
 int glutGetWindow(void);
 

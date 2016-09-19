@@ -26,8 +26,6 @@
 // 150223: Finally, decent handling on the GLUT configuration!
 // 150227: Resize triggers an update!
 // 150302: Window position, multisample, even better config
-// 150618: Added glutMouseIsDown() (not in the old GLUT API but a nice extension!).
-// Added #ifdefs to produce errors if compiled on the wrong platform!
 
 #define _BSD_SOURCE
 #include <math.h>
@@ -48,10 +46,6 @@
 #define M_PI 3.14159265
 #endif
 
-// If this is compiled on the Mac, tell me!
-#ifdef __APPLE__
-	ERROR! This is NOT the Mac version of MicroGlut and will not work on the Mac!
-#endif
 
 unsigned int winWidth = 300, winHeight = 300;
 unsigned int winPosX = 40, winPosY = 40;
@@ -355,7 +349,7 @@ char gButtonPressed[10] = {0,0,0,0,0,0,0,0,0,0};
 void glutMainLoop()
 {
 	char buffer[10];
-	int r; // code;
+//	int r; // code;
 	char done = 0;
 
 	char pressed = 0;
@@ -365,7 +359,6 @@ void glutMainLoop()
 
 	while (!done)
 	{
-      int op = 0;
       while (XPending(dpy) > 0)
       {
          XEvent event;
@@ -378,7 +371,7 @@ void glutMainLoop()
          			done = 1;
 	         	break;
          	case Expose: 
-			op = 1; break; // Update event! Should do draw here.
+				break; // Update event! Should do draw here.
          	case ConfigureNotify:
 				if (gReshape)
 	      			gReshape(event.xconfigure.width, event.xconfigure.height);
@@ -390,7 +383,7 @@ void glutMainLoop()
       			break;
       		case KeyPress:
       		case KeyRelease:
-		        r = XLookupString(&event.xkey, buffer, sizeof(buffer),
+		        XLookupString(&event.xkey, buffer, sizeof(buffer),
                               NULL, NULL);
 
       			if (event.type == KeyPress)
@@ -431,7 +424,6 @@ void glutMainLoop()
 		  	gDisplay();
 		else
 			printf("No display function!\n");
-      	op = 0;
       }
 		else
 		if (gIdle) gIdle();
@@ -593,13 +585,6 @@ void glutWarpPointer( int x, int y )
 char glutKeyIsDown(unsigned char c)
 {
 	return gKeymap[(unsigned int)c];
-}
-
-// Added by the Risinger/RŒberg/Wikstršm project! But... gButtonPressed
-// was already here! Did I miss something?
-char glutMouseIsDown(unsigned char c)
-{
-	return gButtonPressed[(unsigned int)c];
 }
 
 

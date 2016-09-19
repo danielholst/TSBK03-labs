@@ -5,11 +5,6 @@
 extern "C" {
 #endif
 
-// If this is compiled on the Mac, tell me!
-#ifdef __APPLE__
-	ERROR! This is NOT the Mac version of MicroGlut and will not work on the Mac!
-#endif
-
 // Same or similar to old GLUT calls
 void glutMainLoop();
 void glutCheckLoop();
@@ -46,9 +41,6 @@ void glutRepeatingTimer(int millis);
 
 // New call for polling the keyboard, good for games
 char glutKeyIsDown(unsigned char c);
-// And the same for the mouse
-char glutMouseIsDown(unsigned char c);
-
 void glutWarpPointer( int x, int y );
 void glutReshapeWindow(int width, int height);
 void glutPositionWindow(int x, int y);

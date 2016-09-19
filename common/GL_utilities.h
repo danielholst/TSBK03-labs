@@ -15,7 +15,7 @@ extern "C" {
 		#include <GL/gl.h>
 	#endif
 #endif
-#include "MicroGlut.h"
+//#include "MicroGlut.h"
 
 
 void printError(const char *functionName);
@@ -25,8 +25,9 @@ GLuint loadShadersGT(const char *vertFileName, const char *fragFileName, const c
 						const char *tcFileName, const char *teFileName);
 void dumpInfo(void);
 
-void initKeymapManager();
-char keyIsDown(unsigned char c);
+// This is obsolete! Use the functions in MicroGlut instead!
+//void initKeymapManager();
+//char keyIsDown(unsigned char c);
 
 // FBO support
 

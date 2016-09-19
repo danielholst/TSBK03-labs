@@ -62,12 +62,15 @@
 // 130924: Fixed a bug in mat3tomat4.
 // 131014: Added TransposeMat3 (although I doubt its importance)
 // 140213: Corrected mat3tomat4. (Were did the correction in 130924 go?)
+// 151210: Added printMat4 and printVec3.
+// 160302: Added empty constuctors for vec3 and vec4.
 
 // You may use VectorUtils as you please. A reference to the origin is appreciated
 // but if you grab some snippets from it without reference... no problem.
 
 
 #include "VectorUtils3.h"
+#include <stdio.h>
 
 // VS doesn't define NAN properly
 #ifdef WIN32
@@ -968,3 +971,24 @@ mat4 InvertMat4(mat4 a)
 	b.m[15]=(k*u-l*B+o*A)*q;
 	return b;
 };
+
+
+// Two convenient printing functions suggested by Christian Luckey 2015.
+void printMat4(mat4 m)
+{
+	unsigned int i;
+//	printf(" _______________________________________________________________\n");
+	printf(" ---------------------------------------------------------------\n");
+	for (i = 0; i < 4; i++)
+	{
+		int n = i * 4;
+		printf("| %11.5f\t| %11.5f\t| %11.5f\t| %11.5f\t|\n",
+			m.m[n], m.m[n+1], m.m[n+2], m.m[n+3]);
+	}
+	printf(" ---------------------------------------------------------------\n");
+}
+
+void printVec3(vec3 in) 
+{
+	printf("(%f, %f, %f)\n", in.x, in.y, in.z);
+}
