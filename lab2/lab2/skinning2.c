@@ -7,7 +7,7 @@
 
 // 2013: Adapted to VectorUtils3 and MicroGlut.
 
-// gcc skinning2.c ../common/*.c -lGL -o skinning2 -I../common
+// gcc skinning2.c ../common/*.c ../common/Mac/MicroGlut.m -o skinning2 -framework OpenGL -framework Cocoa -I../common/Mac -I../common
 
 #include <stdio.h>
 #include <math.h>
@@ -221,6 +221,7 @@ typedef struct Bone
 //		G _ B O N E S
 // vårt skelett
 Bone g_bones[kMaxBones]; // Ursprungsdata, Šndra ej
+Bone g_bonesRel[kMaxBones]; // Skelettpositioner relativt faderbenet
 Bone g_bonesRes[kMaxBones]; // Animerat
 
 
@@ -235,6 +236,7 @@ void setupBones(void)
   {
 	g_bones[bone].pos = SetVector((float) bone * BONE_LENGTH, 0.0f, 0.0f);
 	g_bones[bone].rot = IdentityMatrix();
+    g_bonesRel[bone].pos = SetVector((float) BONE_LENGTH, 0.0f, 0.0f);
   }
 }
 
@@ -245,30 +247,51 @@ void setupBones(void)
 // Desc:	deformera cylinder meshen enligt skelettet
 void DeformCylinder()
 {
-  //vec3 v[kMaxBones];
-
-  //float w[kMaxBones];
-  int row, corner;
-
-  // för samtliga vertexar 
-  for (row = 0; row < kMaxRow; row++)
-  {
-    for (corner = 0; corner < kMaxCorners; corner++)
-    {
-      // ---------=========  UPG 4 ===========---------
-      // TODO: skinna meshen mot alla benen.
-      //
-      // data som du kan använda:
-      // g_bonesRes[].rot
-      // g_bones[].pos
-      // g_boneWeights
-      // g_vertsOrg
-      // g_vertsRes
-      
+    //vec3 v[kMaxBones];
+    
+    //float w[kMaxBones];
+    int row, corner;
+    
+    mat4 boneMatrices[kMaxBones];
+    mat4 tmpMatrix;
+    mat4 tmp2Matrix;
+    for (int bone = 0; bone < kMaxBones; bone++) {
+        tmpMatrix = IdentityMatrix();
+        tmp2Matrix = IdentityMatrix();
+        for(int i=0; i <= bone; i++) {
+            tmpMatrix = Mult(tmpMatrix, Mult(
+                                             T(g_bonesRel[i].pos.x, g_bonesRel[i].pos.y, g_bonesRel[i].pos.z),
+                                             g_bones[i].rot));
+            tmp2Matrix = Mult(tmp2Matrix, Mult(
+                                               T(g_bonesRel[i].pos.x, g_bonesRel[i].pos.y, g_bonesRel[i].pos.z),
+                                               Mult(g_bones[i].rot, g_bonesRes[i].rot)));
+        }
+        tmpMatrix = InvertMat4(tmpMatrix);
+        boneMatrices[bone] = Mult(tmp2Matrix, tmpMatrix);
     }
-  }
+    
+    // fšr samtliga vertexar
+    for (row = 0; row < kMaxRow; row++) {
+        for (corner = 0; corner < kMaxCorners; corner++) {
+            vec3 tmp_vert = {0.0,0.0,0.0};
+            for(int bone = 0; bone < kMaxBones; bone++) {
+                // ---------=========  UPG 4 ===========---------
+                // TODO: skinna meshen mot alla benen.
+                //
+                // data som du kan anvŠnda:
+                // g_bonesRes[].rot
+                // g_bones[].pos
+                // g_boneWeights
+                // g_vertsOrg
+                // g_vertsRes
+                
+                tmp_vert = VectorAdd(tmp_vert, ScalarMult(MultVec3(boneMatrices[bone], g_vertsOrg[row][corner]),g_boneWeights[row][corner][bone]));
+                
+            }
+            g_vertsRes[row][corner] = tmp_vert;
+        }
+    }
 }
-
 
 /////////////////////////////////////////////
 //		A N I M A T E  B O N E S
@@ -278,11 +301,11 @@ void animateBones(void)
 {
 	int bone;
 	// Hur mycket kring varje led? €ndra gŠrna.
-	float angleScales[10] = { 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f, 1.f };
+    float angleScales[10] = { 0.5f, 0.3f, 0.5f, 0.1f, 0.5f, 0.3f, 0.2f, 0.2f, 0.1f, 0.9f };
 
 	float time = glutGet(GLUT_ELAPSED_TIME) / 1000.0;
 	// Hur mycket skall vi vrida?
-	float angle = sin(time * 3.f) / 2.0f;
+	float angle = sin(time * 3.f) / 1.0f;
 
 	memcpy(&g_bonesRes, &g_bones, kMaxBones*sizeof(Bone)); 
 
@@ -415,7 +438,7 @@ int main(int argc, char **argv)
 			kMaxRow*kMaxCorners,
 			kMaxg_poly * 3);
 
-  g_shader = loadShaders("shader.vert" , "shader.frag");
+  g_shader = loadShaders("shader2.vert" , "shader.frag");
 
   glutMainLoop();
   exit(0);
