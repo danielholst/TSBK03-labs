@@ -236,10 +236,14 @@ void updateWorld()
 		vec3 dX, dP, dL, dO;
 		mat4 Rd;
 
-		// Note: omega is not set. How do you calculate it?
-		// YOUR CODE HERE
+		// set omega
+        vec3 omega = VectorAdd(CrossProduct(ball[i].omega, SetVector(0, -kBallSize, 0)), ball[i].v);
 
-//		v := P * 1/mass
+        // add friction
+        ball[i].F = ScalarMult(omega, -0.04);
+        ball[i].T = CrossProduct(SetVector(0, -kBallSize, 0), ScalarMult(omega, -100.0));
+        
+//		v := P * 1/mass 
 		ball[i].v = ScalarMult(ball[i].P, 1.0/(ball[i].mass));
 //		X := X + v*dT
 		dX = ScalarMult(ball[i].v, deltaT); // dX := v*dT
@@ -350,10 +354,14 @@ void init()
 	ball[1].X = SetVector(0, 0, 0.5);
 	ball[2].X = SetVector(0.0, 0, 1.0);
 	ball[3].X = SetVector(0, 0, 1.5);
+//    ball[4].X = SetVector(0.5, 0, 1.0);
+//    ball[5].X = SetVector(0.1, 0, -1.0);
 	ball[0].P = SetVector(0, 0, 0);
 	ball[1].P = SetVector(0, 0, 0);
 	ball[2].P = SetVector(0, 0, 0);
 	ball[3].P = SetVector(0, 0, 1.00);
+//    ball[4].P = SetVector(1, 0, 1);
+//    ball[5].P = SetVector(1, 0, 0);
 
     cam = SetVector(0, 2, 2);
     point = SetVector(0, 0, 0);
