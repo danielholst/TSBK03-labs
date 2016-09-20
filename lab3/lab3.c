@@ -37,6 +37,8 @@
 #define NUM_LIGHTS 1
 #define kBallSize 0.1
 
+#define epsilon 0.9
+
 #define abs(x) (x > 0.0? x: -x)
 
 void onTimer(int value);
@@ -168,7 +170,7 @@ float vec3Length(vec3 v)
 void updateWorld()
 {
 	// Zero forces
-	int i, j;
+	int i, k;
 	for (i = 0; i < kNumBalls; i++)
 	{
 		ball[i].F = SetVector(0,0,0);
@@ -190,22 +192,28 @@ void updateWorld()
 
 	// Detect collisions, calculate speed differences, apply forces
     
-    vec3 impactSpeed1, impactSpeed2, relSpeed;
-    
 	for (i = 0; i < kNumBalls; i++)
-        for (j = i+1; j < kNumBalls; j++)
+        for (k = i+1; k < kNumBalls; k++)
         {
-            if ( vec3Length( VectorSub(ball[i].X, ball[j].X) ) < kBallSize ) {
+            // check collision
+            vec3 diff = VectorSub(ball[i].X, ball[k].X);
+            if ( vec3Length( diff ) < (2*kBallSize) ) {
                 
-                impactSpeed1 = ball[i].P;
-                impactSpeed2 = ball[j].P;
+                // move apart to avoid errors
+                vec3 normalToImpact = Normalize(diff);
+                vec3 desiredDiff = ScalarMult(normalToImpact, 2*kBallSize);
+                diff = VectorSub(desiredDiff, diff);
                 
-                ball[i].P = impactSpeed2;
-                ball[j].P = impactSpeed1;
+                ball[i].X = VectorAdd(ball[i].X, ScalarMult(diff, 0.5));
+                ball[k].X = VectorSub(ball[k].X, ScalarMult(diff, 0.5));
                 
-                //relSpeed = impactSpeed1 - impactSpeed2;
+                // set new movement to balls ( sid 156 )
+                vec3 relativeVelocity = VectorSub(ball[i].v, ball[k].v);
                 
-                //fprintf(stderr, "hit");
+                float j = -(epsilon+1) * DotProduct(relativeVelocity, normalToImpact) / ( 1/ball[i].mass+1/ball[k].mass);
+                
+                ball[i].P = VectorAdd(ball[i].P, ScalarMult(ScalarMult(normalToImpact, j),1/ball[i].mass));
+                ball[k].P = VectorAdd(ball[k].P, ScalarMult(ScalarMult(normalToImpact, -j),1/ball[k].mass));
             }
             
         }
@@ -334,6 +342,10 @@ void init()
 		ball[i].P = SetVector(((float)(i % 13))/ 50.0, 0.0, ((float)(i % 15))/50.0);
 		ball[i].R = IdentityMatrix();
 	}
+ 
+    // testfall 2
+    //ball[1].mass = 2.0;
+    
 	ball[0].X = SetVector(0, 0, 0);
 	ball[1].X = SetVector(0, 0, 0.5);
 	ball[2].X = SetVector(0.0, 0, 1.0);
