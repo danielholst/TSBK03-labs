@@ -18,16 +18,105 @@
 #include "LoadTGA.h"
 #include "SpriteLight.h"
 #include "GL_utilities.h"
+#include <math.h>
+#include "VectorUtils3.h"
+
+#define radius 100.0
 
 // LŠgg till egna globaler hŠr efter behov.
 
+// add two Fpoints
+FPoint addPoint(FPoint p1, FPoint p2)
+{
+    FPoint p;
+    p.v = p1.v + p2.v;
+    p.h = p1.h + p2.h;
+    
+    return p;
+}
 
+FPoint divPoint(FPoint p1, float d)
+{
+    FPoint p;
+    p.h = p1.h / d;
+    p.v = p1.v / d;
+    
+    return p;
+}
+
+float Length(FPoint p) {
+    return sqrt(p.h * p.h + p.v * p.v);
+}
+
+FPoint normalize(FPoint p) {
+    float length = Length(p);
+    FPoint retVal;
+    retVal.h = p.h / length;
+    retVal.v = p.v / length;
+    return retVal;
+}
+
+// get distance between two FPoints
+float getDistance(FPoint p1, FPoint p2)
+{
+    float diffX = p2.h - p1.h;
+    float diffY = p2.v - p1.v;
+    
+    return sqrt(diffX*diffX + diffY*diffY);
+}
 void SpriteBehavior() // Din kod!
 {
 // LŠgg till din labbkod hŠr. Det gŒr bra att Šndra var som helst i
 // koden i švrigt, men mycket kan samlas hŠr. Du kan utgŒ frŒn den
 // globala listroten, gSpriteRoot, fšr att kontrollera alla sprites
 // hastigheter och positioner, eller arbeta frŒn egna globaler.
+    
+    int creaturesInRadius = 1;
+
+    SpritePtr current = gSpriteRoot;
+    SpritePtr other = gSpriteRoot;
+    
+    FPoint centerPoint = {0, 0};
+    
+    while(current) {
+        centerPoint = current->position;
+        while(other) {
+            
+            // ignore when pointing to the same creature
+            if (current == other) {
+                other = other->next;
+                continue;
+            }
+            // if next creature is within the radius
+            if (getDistance(current->position, other->position) < radius)
+            {
+                if (getDistance(current->position, other->position) > 10) {
+                    centerPoint = addPoint(centerPoint, other->position);
+                    creaturesInRadius++;
+                }
+            }
+
+            other = other->next;
+        }
+        
+        if (creaturesInRadius > 1) {
+            centerPoint = divPoint(centerPoint, creaturesInRadius);
+            
+            FPoint direction = {centerPoint.h - current->position.h,
+                                centerPoint.v - current->position.v};
+
+            direction = normalize(direction);
+            
+            
+            float length = Length(current->speed);
+            current->speed.h = direction.h * length;
+            current->speed.v = direction.v * length;
+        }
+        other = gSpriteRoot;
+        current = current->next;
+        creaturesInRadius = 1;
+    }
+    
 }
 
 // Drawing routine
@@ -106,6 +195,11 @@ void Init()
 	NewSprite(sheepFace, 100, 200, 1, 1);
 	NewSprite(sheepFace, 200, 100, 1.5, -1);
 	NewSprite(sheepFace, 250, 200, -1, 1.5);
+    
+    NewSprite(sheepFace, 100, 300, 0.5, 1);
+    NewSprite(sheepFace, 200, 400, -1, 1);
+    NewSprite(sheepFace, 240, 50, 1, -1);
+    NewSprite(sheepFace, 140, 350, 1, 0.5);
 }
 
 int main(int argc, char **argv)
