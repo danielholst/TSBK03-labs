@@ -21,10 +21,11 @@
 #include <math.h>
 #include "VectorUtils3.h"
 
-// Lägg till egna globaler här efter behov.
+// L‰gg till egna globaler h‰r efter behov.
+TextureData *blackFace, *sheepFace, *dogFace, *foodFace;
 float CohesionRadius = 200.0f;
 float SeperationRadius = 100.0f;
-float CohesionWeight = 0.02f;
+float CohesionWeight = 0.1f;
 float SeperationWeight = 0.01f;
 float AlignmentWeight = 0.01f;
 float maxSpeed = 5.0f;
@@ -64,6 +65,13 @@ FPoint multPoint(FPoint p1, float f)
 
 float Length(FPoint p) {
     return sqrt(p.h * p.h + p.v * p.v);
+}
+
+FPoint addRandom(FPoint p) {
+
+    p.h = p.h + (rand() / ((float)RAND_MAX+1) - 0.5)*1.0;
+    p.v = p.v + (rand() / ((float)RAND_MAX+1) - 0.5)*1.0;
+    return p;
 }
 
 FPoint normalize(FPoint p) {
@@ -173,11 +181,13 @@ void SpriteBehavior() // Din kod!
 
         }
 
+        // set new speed based on the previous steps
         FPoint direction = addPoint(addPoint(cohesionDir, seperationDir), alignmentDir);
+        current->speed = clamp(addPoint(current->speed, direction), maxSpeed);
 
-        current->speed = addPoint(current->speed, direction);
-
-        current->speed = clamp(current->speed, maxSpeed);
+        // add odd behavior for the black cheep
+        if (current->face == blackFace)
+            current->speed = clamp( addRandom(current->speed), maxSpeed);
 
         other = gSpriteRoot;
         current = current->next;
@@ -280,8 +290,6 @@ void Key(unsigned char key,
 
 void Init()
 {
-    TextureData *sheepFace, *blackFace, *dogFace, *foodFace;
-
     LoadTGATextureSimple("bilder/leaves.tga", &backgroundTexID); // Bakgrund
 
     sheepFace = GetFace("bilder/sheep.tga"); // Ett får
@@ -297,6 +305,8 @@ void Init()
     NewSprite(sheepFace, 200, 400, -1, 1);
     NewSprite(sheepFace, 240, 50, 1, -1);
     NewSprite(sheepFace, 140, 350, 1, 0.5);
+
+    NewSprite(blackFace, 300, 450, -1.0, 0.1);
 }
 
 int main(int argc, char **argv)
