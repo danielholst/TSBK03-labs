@@ -25,10 +25,13 @@
 TextureData *blackFace, *sheepFace, *dogFace, *foodFace;
 float CohesionRadius = 200.0f;
 float SeperationRadius = 100.0f;
+float dogRadius = 50.0f;
 float CohesionWeight = 0.1f;
 float SeperationWeight = 0.01f;
 float AlignmentWeight = 0.01f;
+float dogWeight = 1.0f;
 float maxSpeed = 5.0f;
+FPoint dogVec = {1, 1};
 
 // add two Fpoints
 FPoint addPoint(FPoint p1, FPoint p2)
@@ -111,6 +114,7 @@ void SpriteBehavior() // Din kod!
 
     int creaturesInCohesionRadius = 1;
     int creaturesInSeperationRadius = 1;
+    int creaturesInDogRadius = 0;
 
     SpritePtr current = gSpriteRoot;
     SpritePtr other = gSpriteRoot;
@@ -118,11 +122,12 @@ void SpriteBehavior() // Din kod!
     FPoint cohesionPoint = {0, 0};
     FPoint seperationPoint = {0, 0};
     FPoint alignmentPoint = {0, 0};
+    FPoint dogSeperationPoint = {0, 0};
 
     FPoint cohesionDir = {0, 0};
     FPoint seperationDir = {0, 0};
     FPoint alignmentDir = {0, 0};
-
+    FPoint dogSeperationDir = {0, 0};
     FPoint diffSpeed = {0, 0};
     FPoint seperationVec = {0, 0};
 
@@ -134,65 +139,81 @@ void SpriteBehavior() // Din kod!
         cohesionDir = multPoint(cohesionDir, 0.0f);
         seperationDir = multPoint(seperationDir, 0.0f);
         alignmentDir = multPoint(alignmentDir, 0.0f);
+        dogSeperationDir = multPoint(dogSeperationDir, 0.0f);
 
-        while(other) {
+        if (current->face == dogFace) {
+            current->speed = dogVec;
+            current = current->next;
+        }
+        else {
 
-            // ignore when pointing to the same creature
-            if (current == other) {
+            while(other) {
+
+                // ignore when pointing to the same creature
+                if (current == other) {
+                    other = other->next;
+                    continue;
+                }
+                distance = getDistance(current->position, other->position);
+
+                if ( (other->face == dogFace) && (distance < dogRadius) ) {
+                    dogSeperationDir = multPoint(normalize(subPoint(current->position, other->position)), dogRadius-distance);
+                    creaturesInDogRadius++;
+                }
+                // if creature is within the different CohesionRadius
+                if (distance < CohesionRadius) {
+
+                    creaturesInCohesionRadius++;
+
+                    // for cohesion
+                    cohesionPoint = addPoint(cohesionPoint, other->position);
+
+                    // for alignment
+                    diffSpeed = addPoint(diffSpeed, normalize(subPoint(other->speed, current->speed)));
+                }
+                if (distance < SeperationRadius) {
+
+                    // for seperation
+                    seperationVec = multPoint(normalize(subPoint(current->position, other->position)), SeperationRadius-distance);
+                    seperationPoint = addPoint(seperationPoint, seperationVec);
+                    creaturesInSeperationRadius++;
+                }
+
                 other = other->next;
-                continue;
-            }
-            distance = getDistance(current->position, other->position);
-
-            // if creature is within the different CohesionRadius
-            if (distance < CohesionRadius) {
-
-                creaturesInCohesionRadius++;
-
-                // for cohesion
-                cohesionPoint = addPoint(cohesionPoint, other->position);
-
-                // for alignment
-                diffSpeed = addPoint(diffSpeed, normalize(subPoint(other->speed, current->speed)));
-            }
-            if (distance < SeperationRadius) {
-
-                // for seperation
-                seperationVec = multPoint(normalize(subPoint(current->position, other->position)), SeperationRadius-distance);
-                seperationPoint = addPoint(seperationPoint, seperationVec);
-                creaturesInSeperationRadius++;
             }
 
-            other = other->next;
+            if (creaturesInSeperationRadius > 1) {
+
+                seperationPoint = divPoint(seperationPoint, creaturesInSeperationRadius);
+                seperationDir = multPoint(seperationPoint, SeperationWeight);
+            }
+
+            if (creaturesInCohesionRadius > 1) {
+                cohesionPoint = divPoint(cohesionPoint, creaturesInCohesionRadius);
+                cohesionDir = normalize(subPoint(cohesionPoint, current->position));
+                cohesionDir = multPoint(cohesionDir, CohesionWeight);
+
+                alignmentDir = multPoint(diffSpeed, AlignmentWeight);
+
+            }
+            if (creaturesInDogRadius > 0) {
+                dogSeperationDir = multPoint(dogSeperationDir, dogWeight);
+            }
+
+            // set new speed based on the previous steps
+            FPoint direction = addPoint(addPoint(cohesionDir, seperationDir), addPoint(alignmentDir, dogSeperationDir));
+            current->speed = clamp(addPoint(current->speed, direction), maxSpeed);
+
+            // add odd behavior for the black cheep
+            if (current->face == blackFace)
+                current->speed = clamp( addRandom(current->speed), maxSpeed);
+
+            other = gSpriteRoot;
+            current = current->next;
+            creaturesInCohesionRadius = 1;
+            creaturesInSeperationRadius = 1;
+            creaturesInDogRadius = 0;
         }
-
-        if (creaturesInSeperationRadius > 1) {
-
-            seperationPoint = divPoint(seperationPoint, creaturesInSeperationRadius);
-            seperationDir = multPoint(seperationPoint, SeperationWeight);
-        }
-
-        if (creaturesInCohesionRadius > 1) {
-            cohesionPoint = divPoint(cohesionPoint, creaturesInCohesionRadius);
-            cohesionDir = normalize(subPoint(cohesionPoint, current->position));
-            cohesionDir = multPoint(cohesionDir, CohesionWeight);
-
-            alignmentDir = multPoint(diffSpeed, AlignmentWeight);
-
-        }
-
-        // set new speed based on the previous steps
-        FPoint direction = addPoint(addPoint(cohesionDir, seperationDir), alignmentDir);
-        current->speed = clamp(addPoint(current->speed, direction), maxSpeed);
-
-        // add odd behavior for the black cheep
-        if (current->face == blackFace)
-            current->speed = clamp( addRandom(current->speed), maxSpeed);
-
-        other = gSpriteRoot;
-        current = current->next;
-        creaturesInCohesionRadius = 1;
-        creaturesInSeperationRadius = 1;
     }
 }
 
@@ -283,6 +304,20 @@ void Key(unsigned char key,
         SeperationRadius -= 5;
         printf("separation_distance = %f\n", SeperationRadius);
         break;
+
+      // kontrollera hunden
+    case 'a':
+        dogVec.h = -3;
+        break;
+    case 'd':
+        dogVec.h = 3;
+        break;
+    case 'w':
+        dogVec.v = 3;
+        break;
+    case 's':
+        dogVec.v = -3;
+        break;
     case 0x1b:
       exit(0);
   }
@@ -307,6 +342,8 @@ void Init()
     NewSprite(sheepFace, 140, 350, 1, 0.5);
 
     NewSprite(blackFace, 300, 450, -1.0, 0.1);
+
+    NewSprite(dogFace, 500, 500, 0, 0);
 }
 
 int main(int argc, char **argv)
